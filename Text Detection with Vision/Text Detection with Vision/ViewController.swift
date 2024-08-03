@@ -7,6 +7,7 @@
 
 import UIKit
 import Vision
+import VisionKit
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate & UINavigationControllerDelegate {
     
@@ -26,11 +27,19 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate & UINavi
         return image
     }()
     
-    private lazy var getTextBtn: UIButton = {
+    private lazy var getEnglishFromImage: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Get Text from image", for: .normal)
-        button.addTarget(self, action: #selector(recognizeText), for: .touchUpInside)
+        button.setTitle("Get English from image", for: .normal)
+        button.addTarget(self, action: #selector(recognizeEnglish), for: .touchUpInside)
+        return button
+    }()
+    
+    private lazy var getKoreanAndEnglishFromImage: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setTitle("Get English and Korean from image", for: .normal)
+        button.addTarget(self, action: #selector(recognizeEnglishAndKorean), for: .touchUpInside)
         return button
     }()
     
@@ -62,7 +71,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate & UINavi
     
     private func layout() {
         self.view.addSubview(imageVw)
-        self.view.addSubview(getTextBtn)
+        self.view.addSubview(getEnglishFromImage)
+        self.view.addSubview(getKoreanAndEnglishFromImage)
         self.view.addSubview(labelVw)
         
         NSLayoutConstraint.activate([
@@ -71,10 +81,13 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate & UINavi
             imageVw.heightAnchor.constraint(equalToConstant: 300),
             imageVw.widthAnchor.constraint(equalToConstant: 300),
             
-            getTextBtn.topAnchor.constraint(equalTo: imageVw.bottomAnchor, constant: 20),
-            getTextBtn.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
+            getEnglishFromImage.topAnchor.constraint(equalTo: imageVw.bottomAnchor, constant: 20),
+            getEnglishFromImage.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
             
-            labelVw.topAnchor.constraint(equalTo: getTextBtn.bottomAnchor, constant: 20),
+            getKoreanAndEnglishFromImage.topAnchor.constraint(equalTo: getEnglishFromImage.bottomAnchor, constant: 20),
+            getKoreanAndEnglishFromImage.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
+            
+            labelVw.topAnchor.constraint(equalTo: getKoreanAndEnglishFromImage.bottomAnchor, constant: 20),
             labelVw.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
             labelVw.widthAnchor.constraint(equalToConstant: 300)
         ])
@@ -91,7 +104,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate & UINavi
         picker.dismiss(animated: true, completion: nil)
     }
     
-    @objc private func recognizeText() {
+    @objc private func recognizeEnglish() {
         let request = VNRecognizeTextRequest{ (request, error) in
             guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
             let recognizedStrings = observations.compactMap { $0.topCandidates(1).first?.string }
@@ -104,6 +117,27 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate & UINavi
             try? handler.perform([request])
         }
     }
+    
+    @objc private func recognizeEnglishAndKorean() {
+        let request = VNRecognizeTextRequest{ (request, error) in
+            guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
+            let recognizedStrings = observations.compactMap { $0.topCandidates(1).first?.string }
+            let text = recognizedStrings.joined(separator: "\n")
+            self.labelVw.text = text
+            print(text)
+        }
+        
+        if let image = imageVw.image {
+            let handler = VNImageRequestHandler(cgImage: image.cgImage!, options: [:])
+            request.recognitionLanguages = ["ko-KR"]
+            /// 정확도와 속도 중 어느 것을 중점적으로 처리할 것인지
+            request.recognitionLevel = .accurate
+            /// 언어를 인식하고 수정하는 과정을 거침.
+            request.usesLanguageCorrection = true
+            try? handler.perform([request])
+        }
+    }
+
     
 }
 
